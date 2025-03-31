@@ -1,2 +1,4 @@
 out
-SDL3.dll
+*.dll
+*.lib
+*.pdb

@@ -3,10 +3,11 @@ package pong
 import "core:log"
 // import "core:math"
 import "core:os"
-// import "core:strings"
+import "core:strings"
 import SDL "vendor:sdl3"
+import TTF "../vendor/sdl3_font"
 
-WINDOW_TITLE  :: "Hellope World!"
+WINDOW_TITLE  :: "Pong"
 WINDOW_X      := i32(400)
 WINDOW_Y      := i32(400)
 WINDOW_WIDTH  := i32(800)
@@ -18,6 +19,7 @@ CTX :: struct {
 	window:        ^SDL.Window,
 	surface:       ^SDL.Surface,
 	renderer:      ^SDL.Renderer,
+	font: 		   ^TTF.Font,
 	// textures:      [dynamic]Texture_Asset, 
 
 	should_close:  bool,
@@ -31,6 +33,8 @@ CTX :: struct {
 ctx := CTX{}
 
 init_sdl :: proc() -> (ok: bool) {
+	// TODO(dkg): When in release mode use a file logger, not console!
+
     log.info("Initializing SDL.")
 
 	if sdl_res := SDL.Init(SDL.INIT_VIDEO); !sdl_res {
@@ -47,6 +51,28 @@ init_sdl :: proc() -> (ok: bool) {
     ctx.renderer = SDL.CreateRenderer(ctx.window, nil)
 	if ctx.renderer == nil {
 		log.errorf("SDL.CreateRenderer failed. %s", SDL.GetError())
+		return false
+	}
+
+	if !TTF.Init() {
+		log.errorf("TTF.Init failed. %s", SDL.GetError())
+		return false
+	}
+
+	fontFileName := "font.ttf"
+	if !os.exists(fontFileName) {
+		fontFileName = "resources/fonts/Mx437_DOS-V_re_ANK16.ttf" // "Ac437_IBM_VGA_8x16.ttf" // "Mx437_DOS-V_re_ANK16.ttf"
+	}
+
+	log.infof("Loading font: %s", fontFileName)
+
+	ctx.font = TTF.OpenFont(strings.clone_to_cstring(fontFileName), 1.0)
+	if ctx.font == nil {
+		log.errorf("TTF.OpenFont failed. %s", SDL.GetError())
+		return false
+	}
+	if !TTF.SetFontSize(ctx.font, 22.0) {
+		log.errorf("TTF.SetFontSize failed. %s", SDL.GetError())
 		return false
 	}
 
@@ -82,6 +108,17 @@ draw:: proc() {
 	rect := SDL.FRect{10, 10, 100, 100}
 	SDL.RenderFillRect(ctx.renderer, &rect)
 
+	color := SDL.Color { 0xff, 0xff, 0xff, 255 }
+
+	surface := TTF.RenderText_Solid(ctx.font, "Hello World", 0, color)
+	texture := SDL.CreateTextureFromSurface(ctx.renderer, surface)
+
+	dstRect := SDL.FRect{10, 120, 400, 32}
+	SDL.RenderTexture(ctx.renderer, texture, nil, &dstRect)
+
+	SDL.DestroySurface(surface)
+	SDL.DestroyTexture(texture)
+
 	SDL.RenderPresent(ctx.renderer)
 }
 
@@ -102,6 +139,11 @@ loop :: proc() {
 
 cleanup :: proc() {
     // defer delete(ctx.textures)
+	log.info("Cleanin up.")
+	if ctx.font != nil {
+		_ = TTF.CloseFont(ctx.font)
+	}
+	TTF.Quit()
 	SDL.DestroyWindow(ctx.window)
 	SDL.Quit()
 }
