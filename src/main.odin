@@ -5,7 +5,7 @@ import "core:log"
 import "core:os"
 import "core:strings"
 import SDL "vendor:sdl3"
-import TTF "../vendor/sdl3_font"
+import TTF "../vendor/sdl3_ttf"
 
 WINDOW_TITLE  :: "Pong"
 WINDOW_X      := i32(400)
