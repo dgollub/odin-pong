@@ -18,8 +18,8 @@ You have to copy the [font file](./resources/fonts/Mx437_DOS-V_re_ANK16.ttf) int
 
 Then you can run this to start the game:
 
-```console
-odin run src/ -out:out/pong.exe -strict-style -vet -debug
+```shell
+$ odin run src/ -out:out/pong.exe -strict-style -vet -debug
 ```
 
 

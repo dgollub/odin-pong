@@ -2,6 +2,7 @@ package pong
 
 import "core:log"
 // import "core:math"
+// import "core:c"
 import "core:os"
 import "core:strings"
 import SDL "vendor:sdl3"
@@ -28,6 +29,8 @@ CTX :: struct {
 	frame_start:   f64,
 	frame_end:     f64,
 	frame_elapsed: f64,
+
+	counted_frames: i64,
 }
 
 ctx := CTX{}
@@ -76,6 +79,11 @@ init_sdl :: proc() -> (ok: bool) {
 		return false
 	}
 
+	if !SDL.SetRenderVSync(ctx.renderer, 1) {
+		log.errorf("SDL.SetRenderVSync failed. %s", SDL.GetError())
+		return false
+	}
+
     log.infof("Using the %s renderer.", SDL.GetRendererName(ctx.renderer))
 
     return true
@@ -110,10 +118,31 @@ draw:: proc() {
 
 	color := SDL.Color { 0xff, 0xff, 0xff, 255 }
 
-	surface := TTF.RenderText_Solid(ctx.font, "Hello World", 0, color)
+	avgFPS := f64(ctx.counted_frames) / f64(SDL.GetTicks() / 1000)
+	if avgFPS > 2000000 {
+		avgFPS = 0
+	}
+
+	fpsString := strings.builder_make()
+	strings.write_i64(&fpsString, i64(avgFPS))
+	strings.write_string(&fpsString, " FPS")
+	fpsCString := strings.clone_to_cstring(strings.to_string(fpsString))
+
+	surface := TTF.RenderText_Solid(ctx.font, fpsCString, 0, color)
 	texture := SDL.CreateTextureFromSurface(ctx.renderer, surface)
 
-	dstRect := SDL.FRect{10, 120, 400, 32}
+	// Draw FPS on the right side
+	w := f32(40)
+	h := f32(24)
+	x := f32(10)
+	y := f32(120)
+	win: [2]i32
+	if !SDL.GetWindowSizeInPixels(ctx.window, &win.x, &win.y) {
+		log.errorf("SDL.GetWindowSizeInPixels failed. %s", SDL.GetError())
+	} else {
+		x = f32(f32(win.x) - w - 10)
+	}
+	dstRect := SDL.FRect{x, y, w, h}
 	SDL.RenderTexture(ctx.renderer, texture, nil, &dstRect)
 
 	SDL.DestroySurface(surface)
@@ -125,6 +154,7 @@ draw:: proc() {
 loop :: proc() {
     ctx.frame_start   = ctx.app_start
 	ctx.frame_elapsed = 0.001 // Set frame time to 1ms for the first frame to avoid problems.
+	ctx.counted_frames = 0
 
 	for !ctx.should_close {
 		process_input()
@@ -134,6 +164,7 @@ loop :: proc() {
 		ctx.frame_end     = f64(SDL.GetPerformanceCounter()) / f64(SDL.GetPerformanceFrequency())
 		ctx.frame_elapsed = ctx.frame_end - ctx.frame_start
 		ctx.frame_start   = ctx.frame_end
+		ctx.counted_frames += 1
 	}
 }
 
